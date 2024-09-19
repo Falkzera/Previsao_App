@@ -64,7 +64,7 @@ convertendo_obj = ['ANO', 'MES', 'PODER', 'UO', 'UG', 'FONTE_MAE', 'NATUREZA3']
 for column in convertendo_obj:
     dados[column] = dados[column].astype('object')
 
-st.checkbox('')
+
 # dados = dados.dropna()
 dados = dados[dados['VALOR_EMPENHADO'] > 1]
 dados.set_index('ANO_MES', inplace=True)  # Setando o index e removendo a coluna
@@ -527,5 +527,5 @@ try:
 
 except Exception as e:
     st.error(f"Ocorreu um erro: {e}")
-    
+
 display_credits()
