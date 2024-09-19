@@ -56,16 +56,15 @@ dados = dados.merge(sigla_nat3[['NATUREZA3', 'NATUREZA3_DESC']], on='NATUREZA3',
 # Renomear a coluna 'PODER' para 'UO_sigla'
 dados.rename(columns={'SIGLA': 'UO_sigla'}, inplace=True)
 
-
-
-
 dados['ANO_MES'] = dados['ANO'].astype(str) + '-' + dados['MES'].astype(str)
 dados['ANO_MES'] = pd.to_datetime(dados['ANO_MES'], format='%Y-%m')
 dados = dados.sort_values(by=['ANO', 'MES']).reset_index(drop=True)
 convertendo_obj = ['ANO', 'MES', 'PODER', 'UO', 'UG', 'FONTE_MAE', 'NATUREZA3']
 for column in convertendo_obj:
     dados[column] = dados[column].astype('object')
-dados = dados.dropna()
+
+st.checkbox('')
+# dados = dados.dropna()
 dados = dados[dados['VALOR_EMPENHADO'] > 1]
 dados.set_index('ANO_MES', inplace=True)  # Setando o index e removendo a coluna
 ############################################################################################
@@ -292,21 +291,18 @@ st.title('Previsão do Valor Empenhado')
 
 # Teste da estacionaridade da serie temporal
 st.subheader('Testando Estacionaridade da série temporal')
+teste_estacionaridade = dsa_testa_estacionaridade(dados['VALOR_EMPENHADO'])
+if teste_estacionaridade:
+    st.success('A série temporal é estacionária.')
+else:
+    st.error('A série temporal não é estacionária.')
+    st.warning('Aplicando Transformação...')
+
+
+
 
 # Transformando a série temporal em logaritmo - Estacionaridade Manual
 dados['VALOR_EMPENHADO_log'] = np.log(dados['VALOR_EMPENHADO'])
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -394,10 +390,10 @@ class ModeloPrevisao:
             col1, col2, col3, col4 = st.columns(4)
             
             # Exibir métricas com delta
-            col1.metric(label="MAE", value=f"{mae:.5f}", delta=f"{mae:.5f}", delta_color="inverse")  # Erro médio absoluto
-            col2.metric(label="MSE", value=f"{mse:.5f}", delta=f"{mse:.5f}", delta_color="inverse")  # Erro médio quadrático
-            col3.metric(label="RMSE", value=f"{rmse:.5f}", delta=f"{rmse:.5f}", delta_color="inverse")  # Raiz do erro médio quadrático
-            col4.metric(label="MAPE", value=f"{mape:.5f}%", delta=f"{mape:.5f}%", delta_color="inverse")  # Erro médio percentual absoluto
+            col1.metric(label="MAE", value=f"{mae:.5f}", delta=f"{mae:.5f}", delta_color="off")  # Erro médio absoluto
+            col2.metric(label="MSE", value=f"{mse:.5f}", delta=f"{mse:.5f}", delta_color="off")  # Erro médio quadrático
+            col3.metric(label="RMSE", value=f"{rmse:.5f}", delta=f"{rmse:.5f}", delta_color="off")  # Raiz do erro médio quadrático
+            col4.metric(label="MAPE", value=f"{mape:.5f}%", delta=f"{mape:.5f}%", delta_color="off")  # Erro médio percentual absoluto
 
 # Modelo Simple Exponential Smoothing
 class ModeloSES(ModeloPrevisao):
@@ -487,7 +483,7 @@ def mostrar_resultados_previsao(previsoes_futuras):
 
 # Aplicação Streamlit
 st.write('Selecione a porcentagem de treino.')
-escolha_porcentagem_treino = st.slider('Porcentagem de Treino', 0.1, 0.9, 0.8)
+escolha_porcentagem_treino = st.slider('Porcentagem de Treino', 0.1, 0.99, 0.8)
 porcentagem_treino = escolha_porcentagem_treino
 indice_corte = int(len(dados) * porcentagem_treino)
 df_treino = dados.iloc[:indice_corte]
@@ -501,7 +497,7 @@ try:
         )
 
         mostrar_previsao_futura = st.checkbox("Mostrar Previsão Futura")
-        escolha_periodo = st.selectbox('Selecione o período futuro para previsão (meses)', [1, 3, 6, 12, 24, 36], index=2)
+        escolha_periodo = st.selectbox('Selecione o período futuro para previsão (meses)', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 24, 36], index=2)
 
         if modelo_selecionado == 'Simple Exponential Smoothing':
             modelo = ModeloSES(df_treino, df_valid)
@@ -512,7 +508,26 @@ try:
 
         modelo.treinar()
         modelo.prever(mostrar_previsao_futura, escolha_periodo)
+        
+        # mostrar previsao sem abreviação de M ou B
+        previsoes_futuras = None
+
+        if mostrar_previsao_futura:
+            previsoes_futuras = modelo.modelo.forecast(escolha_periodo)
+            previsoes_futuras = pd.Series(previsoes_futuras, index=pd.date_range(start=df_valid.index[-1], periods=escolha_periodo, freq='M'))
+            previsoes_futuras = np.exp(previsoes_futuras)
+            st.write('Previsões Futuras:')
+            st.write(previsoes_futuras)
+
+
+        dados_2024_existentes = dados[dados['Ano'] == 2024]
+        dados_2024_existentes['VALOR_EMPENHADO']
+            
 
 except Exception as e:
     st.error(f"Ocorreu um erro: {e}")
+
+
+st.title('Nova Seção')
+
 

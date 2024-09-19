@@ -24,67 +24,91 @@ from modulos.estacionaridade import *
 from modulos.testes_estacionarios import *
 ##########################################################################
 # Configurações Página
-st.set_page_config(layout="wide")
-
+st.set_page_config(layout="wide", page_icon=":bar_chart:", page_title="Análise do Gasto Empenhado")
 # Configurações Sidebar
 st.sidebar.title('Configurações')
-st.sidebar.write('Selecione as opções do gráfico.')
-
+st.sidebar.write('Selecione as opções gráficas.')
+# Botão de atualizar
 st.button('Atualizar')
 ###############################################################################
 # Carregando e filtrando a Base
 @st.cache_data
 def load_data():
-    df = pd.read_csv('data/desepesa_2018_2024.csv', encoding='latin1', sep=';')
-    df1 = pd.read_excel('data/despesa_2014_2017.xlsx')
-    df_test = df[['ANO', 'MES', 'PODER', 'UO', 'UG', 'FONTE_MAE', 'NATUREZA3', 'VALOR_EMPENHADO']]
-    df_test1 = df1[['ANO', 'MES', 'PODER', 'UO', 'UG', 'FONTE_MAE', 'NATUREZA3', 'VALOR_EMPENHADO']]
-    df_test = pd.concat([df_test, df_test1])
-    return df_test
+    dados = pd.read_csv('data/2014_2024.csv')
+    
+    return dados
 
 # Carregar os dados
 dados = load_data()
 ########################################################################################
 # Pré-processamento
+
+dados
+
+somatorio1 = dados[['VALOR_EMPENHADO', 'NATUREZA3', 'PODER']]
+somatorio1 = somatorio1[somatorio1['NATUREZA3'] == 331000000]
+somatorio1 = somatorio1[somatorio1['PODER'] == 'EXE']
+somatorio1 = somatorio1['VALOR_EMPENHADO'].sum()
+somatorio1
+
+
+st.write('---') ##############################################################################################################################################################################################
+
+
+
+
+sigla = pd.read_csv('data/sigla.csv')
+sigla['UO'] = sigla['UO'].astype('object')
+sigla_nat3 = pd.read_csv('data/sigla_nat3.csv')
+
+# em sigla contem a coluna UO que é a Unidade Orçamentária e contem a coluna PODER que é a sigla de UO. Quero que essa coluna de PODER va para o df dados e crie uma coluna UO_sigla
+dados = dados.merge(sigla[['UO', 'SIGLA']], on='UO', how='left')
+dados = dados.merge(sigla_nat3[['NATUREZA3', 'NATUREZA3_DESC']], on='NATUREZA3', how='left')
+
+# Renomear a coluna 'PODER' para 'UO_sigla'
+dados.rename(columns={'SIGLA': 'UO_sigla'}, inplace=True)
+
+
+
+
 dados['ANO_MES'] = dados['ANO'].astype(str) + '-' + dados['MES'].astype(str)
 dados['ANO_MES'] = pd.to_datetime(dados['ANO_MES'], format='%Y-%m')
 dados = dados.sort_values(by=['ANO', 'MES']).reset_index(drop=True)
 convertendo_obj = ['ANO', 'MES', 'PODER', 'UO', 'UG', 'FONTE_MAE', 'NATUREZA3']
 for column in convertendo_obj:
     dados[column] = dados[column].astype('object')
-dados = dados.dropna()
-dados = dados[dados['VALOR_EMPENHADO'] > 0]
+# dados = dados.dropna()
+# dados = dados[dados['VALOR_EMPENHADO'] > 1]
 dados.set_index('ANO_MES', inplace=True)  # Setando o index e removendo a coluna
 ############################################################################################
-#############################################################################################
 # Filtros de seleção
-uo_options = ['TODAS'] + list(dados['UO'].unique())
-# Definir seleções padrão
+# Descrição das legendas
+if st.sidebar.checkbox('Ativar Siglas', value=True):
+    dados['UO'] = dados['UO_sigla']
+    dados['NATUREZA3'] = dados['NATUREZA3_DESC']
+else:
+    dados['UO'] = dados['UO']
+    dados['NATUREZA3'] = dados['NATUREZA3']
+
+
+uo_options = ['TODAS'] + list(dados['UO'].unique()) # Opções de seleção para Unidade Orçamentária
 default_poder = ['EXE']
 default_uo = ['TODAS']
-# Criar os filtros na sidebar com seleções padrão
-escolha_poder = st.sidebar.multiselect('Escolha o Poder', dados['PODER'].unique(), default_poder)
-escolha_uo = st.sidebar.multiselect('Escolha a UO', uo_options, default_uo)
-escolha_nat3 = st.sidebar.multiselect('Escolha a Natureza - 3', dados['NATUREZA3'].unique())
-# Aplicar os filtros apenas se houver seleções
+escolha_poder = st.sidebar.multiselect('Escolha o Poder', dados['PODER'].unique(), default_poder) # Seleção de Poder
+escolha_uo = st.sidebar.multiselect('Escolha a UO', uo_options, default_uo) # Seleção de Unidade Orçamentária
+escolha_nat3 = st.sidebar.multiselect('Escolha a Natureza - 3', dados['NATUREZA3'].unique()) # Seleção de Natureza
 if 'TODAS' not in escolha_uo:
     dados = dados[dados['UO'].isin(escolha_uo)]
 if escolha_nat3:
     dados = dados[dados['NATUREZA3'].isin(escolha_nat3)]
 if escolha_poder:
     dados = dados[dados['PODER'].isin(escolha_poder)]
-
-##############################################################################################################################################
-# METRICAS
-# A partir dos dados filtrados acima, calcular as métricas: Mínima Histórica, Máxima Histórica e Porcentagem dos gastos por Natureza Escolhida
-minimo_historico = dados['VALOR_EMPENHADO'].min() # Mínimo histórico
-maximo_historico = dados['VALOR_EMPENHADO'].max() # Máximo histórico
+#####################################################################################################
+# Metrícas
 total_gasto = dados['VALOR_EMPENHADO'].sum() # Total gasto no período
-
-###############################################################################################################################
-# Calcular a porcentagem dos gastos por natureza escolhida
 gastos_por_natureza = dados.groupby('NATUREZA3')['VALOR_EMPENHADO'].sum()  # Gasto total por natureza
 porcentagem_gastos = (gastos_por_natureza / total_gasto * 100)  # Porcentagem dos gastos por natureza
+
 
 # Criar um DataFrame para exibir o ranking por natureza
 ranking_gastos_natureza = pd.DataFrame({
@@ -93,9 +117,8 @@ ranking_gastos_natureza = pd.DataFrame({
     'Porcentagem (%)': porcentagem_gastos.values
 }).sort_values(by='Gasto (R$)', ascending=False)  # Ordenar por gasto em ordem decrescente
 
-# Formatar os valores de gasto para exibição
+# Formatação dos valores de gasto e porcentagem para exibição
 ranking_gastos_natureza['Gasto (R$)'] = ranking_gastos_natureza['Gasto (R$)'].apply(lambda x: f'R$ {x/1e9:.1f}B' if x >= 1e9 else f'R$ {x/1e6:.1f}M')
-# Formatar os valores de porcentagem para exibição
 ranking_gastos_natureza['Porcentagem (%)'] = ranking_gastos_natureza['Porcentagem (%)'].apply(lambda x: f'{x:.2f}%')
 
 # Calcular a porcentagem dos gastos por unidade orçamentária
@@ -111,7 +134,6 @@ ranking_gastos_uo = pd.DataFrame({
 
 # Formatar os valores de gasto para exibição
 ranking_gastos_uo['Gasto (R$)'] = ranking_gastos_uo['Gasto (R$)'].apply(lambda x: f'R$ {x/1e9:.1f}B' if x >= 1e9 else f'R$ {x/1e6:.1f}M')
-# Formatar os valores de porcentagem para exibição
 ranking_gastos_uo['Porcentagem (%)'] = ranking_gastos_uo['Porcentagem (%)'].apply(lambda x: f'{x:.2f}%')
 
 # Calcular a porcentagem dos gastos por unidade orçamentária e tipo de natureza
@@ -128,27 +150,37 @@ def formatar_valor(valor):
     return f'R$ {valor/1e9:.1f}B' if valor >= 1e9 else f'R$ {valor/1e6:.1f}M'
 
 ranking_gastos_uo_natureza = ranking_gastos_uo_natureza.applymap(formatar_valor)
-
-# Remover vírgulas dos índices
 ranking_gastos_uo_natureza.index = ranking_gastos_uo_natureza.index.astype(str).str.replace(',', '')
 #######################################################################################################################################################################
-##################################################################################################################
 # Agrupando os dados
 dados = dados.drop(columns=['ANO', 'MES'])
 dados = dados.groupby('ANO_MES')['VALOR_EMPENHADO'].sum().reset_index()
+
+
+
+st.write("aqui") #################################################################################################################################################################################################################
+dados
+
+somatorio2 = dados['VALOR_EMPENHADO'].sum()
+somatorio2
+
+
+
+
+
+
+
 dados = dados[:-1]  # Setembro não acabou, então não temos o valor oficial de setembro de 2024
 dados.set_index('ANO_MES', inplace=True)  # Setando o index novamente após o agrupamento
-
-# Usúario
+############################################################################################
+# Layout Página
 st.title('SUPERINTENDÊNCIA DE ORÇAMENTO PÚBLICO')
 st.subheader('Estudos e Projeções do Gasto Empenhado')
 st.write('Análise da série temporal: 2014 - 2024.')
-# Criando um gráfico com st.plotly_chart
 st.title('Gráfico da Série Temporal')
-# Metricas
-
 st.write('Selecione o Périodo de Análise.')
-# Filtro de tempo com slider para escolher o período
+
+# Filtro temporal
 min_date = dados.index.min().to_pydatetime()
 max_date = dados.index.max().to_pydatetime()
 data_inicio, data_fim = st.slider(
@@ -160,14 +192,10 @@ data_inicio, data_fim = st.slider(
 # Filtrar os dados com base no período selecionado
 dados = dados.loc[data_inicio:data_fim]
 #######################################################################################################################################################################
-
-
-
-
-
-
-
-# Exibição das metricas
+# Criação e APlicação das métricas
+total_gasto = dados['VALOR_EMPENHADO'].sum() # Total gasto no período
+minimo_historico = dados['VALOR_EMPENHADO'].min() # Mínimo histórico
+maximo_historico = dados['VALOR_EMPENHADO'].max() # Máximo histórico
 dados['media_movel'] = dados['VALOR_EMPENHADO'].rolling(window=12).mean() # Média Móvel de 12 meses significa que estamos considerando o gasto médio dos últimos 12 meses
 # Calcular Desvio padrão móvel (Rolling Standard Deviation) para 12 meses, dando o resultado em CV, coeficiente de variação
 dados['desvio_padrao'] = dados['VALOR_EMPENHADO'].rolling(window=12).std() / dados['media_movel'] * 100
@@ -180,17 +208,11 @@ with st.container():
     col3.metric(label="Total Gasto", value=f'R$ {total_gasto/1e9:.1f}B' if total_gasto >= 1e9 else f'R$ {total_gasto/1e6:.1f}M')
     col4.metric(label="Média Móvel", value=f'R$ {dados["media_movel"].iloc[-1]/1e9:.1f}B' if dados["media_movel"].iloc[-1] >= 1e9 else f'R$ {dados["media_movel"].iloc[-1]/1e6:.1f}M')
     col5.metric(label="Desvio Padrão (%)", value=f'{dados["desvio_padrao"].iloc[-1]:.2f}%')
-
-
-
-
 #######################################################################################################################################################################
 # Adicionar checkboxes para ativar ou desativar a visualização dos pontos de mínimo e máximo e as legendas dos governadores
-show_min_max = st.sidebar.checkbox('Mostrar Pontos de Mínimo e Máximo', value=True)
-show_governors = st.sidebar.checkbox('Mostrar Legendas dos Governadores', value=True)
-
-# Adicionar um selectbox para escolher a frequência dos pontos no gráfico, incluindo a opção "Nenhum Ponto"
-frequencia_pontos = st.sidebar.selectbox('Escolher Frequência dos Pontos no Gráfico (Meses)', ['Nenhum Ponto'] + list(range(1, 13)), index=0)
+show_min_max = st.sidebar.checkbox('Mostrar Pontos de Mínimo e Máximo', value=True) # Mostrar pontos de mínimo e máximo
+show_governors = st.sidebar.checkbox('Mostrar Legendas dos Governadores', value=False) # Mostrar legendas dos governadores
+frequencia_pontos = st.sidebar.selectbox('Frequência dos Pontos no Gráfico (Meses)', ['Nenhum Ponto'] + list(range(1, 13)), index=0) # Frequência dos pontos no gráfico
 
 # Encontrar os mínimos e máximos para cada ano
 dados['Ano'] = dados.index.year
@@ -198,7 +220,6 @@ min_max_per_year = dados.groupby('Ano')['VALOR_EMPENHADO'].agg(['min', 'max'])
 
 # Criar o gráfico com plotly
 fig = go.Figure()
-
 # Adicionar a linha do gráfico para cada período de governador
 if show_governors:
     # Período Teotônio Vilela
@@ -271,10 +292,9 @@ fig.update_layout(title='Valor Empenhado com Destaques nos Mínimos e Máximos p
                   yaxis_title='Valor Empenhado',
                   legend=dict(x=0, y=1, traceorder='normal', font=dict(size=12)))
 
-# Exibir o gráfico com streamlit
 st.plotly_chart(fig)
 #####################################################################################################
-# Exibir os rankings dentro de um st.expander com três colunas
+# st.expander para mostrar os detalhes das despesas
 with st.expander("Detalhamento de Despesa"):
     col1, col2, col3 = st.columns(3)
     
@@ -290,12 +310,39 @@ with st.expander("Detalhamento de Despesa"):
         st.write("Ranking de Gastos por Unidade Orçamentária e Tipo de Natureza:")
         st.dataframe(ranking_gastos_uo_natureza)
 #####################################################################################################
+#####################################################################################################
+st.write('---')
+#####################################################################################################
+# Previsão do modelo
 # Transformnado em logaritmo
 
 st.title('Previsão do Valor Empenhado')
+
+# Teste da estacionaridade da serie temporal
+st.subheader('Testando Estacionaridade da série temporal')
+teste_estacionaridade = dsa_testa_estacionaridade(dados['VALOR_EMPENHADO'])
+if teste_estacionaridade:
+    st.success('A série temporal é estacionária.')
+else:
+    st.error('A série temporal não é estacionária.')
+    st.warning('Aplicando Transformação...')
+
+
+
+
+# Transformando a série temporal em logaritmo - Estacionaridade Manual
 dados['VALOR_EMPENHADO_log'] = np.log(dados['VALOR_EMPENHADO'])
 
 
+
+
+
+
+
+
+
+####################################################################################################
+# S.O.L.I.D - PREVISÃO, GŔAFICO, LEGENDAS E METRICAS
 # Função para calcular métricas
 def calcular_metricas(y_true, y_pred):
     mae = mean_absolute_error(y_true, y_pred)
@@ -372,10 +419,10 @@ class ModeloPrevisao:
             col1, col2, col3, col4 = st.columns(4)
             
             # Exibir métricas com delta
-            col1.metric(label="MAE", value=f"{mae:.5f}", delta=f"{mae:.5f}", delta_color="inverse")  # Erro médio absoluto
-            col2.metric(label="MSE", value=f"{mse:.5f}", delta=f"{mse:.5f}", delta_color="inverse")  # Erro médio quadrático
-            col3.metric(label="RMSE", value=f"{rmse:.5f}", delta=f"{rmse:.5f}", delta_color="inverse")  # Raiz do erro médio quadrático
-            col4.metric(label="MAPE", value=f"{mape:.5f}%", delta=f"{mape:.5f}%", delta_color="inverse")  # Erro médio percentual absoluto
+            col1.metric(label="MAE", value=f"{mae:.5f}", delta=f"{mae:.5f}", delta_color="off")  # Erro médio absoluto
+            col2.metric(label="MSE", value=f"{mse:.5f}", delta=f"{mse:.5f}", delta_color="off")  # Erro médio quadrático
+            col3.metric(label="RMSE", value=f"{rmse:.5f}", delta=f"{rmse:.5f}", delta_color="off")  # Raiz do erro médio quadrático
+            col4.metric(label="MAPE", value=f"{mape:.5f}%", delta=f"{mape:.5f}%", delta_color="off")  # Erro médio percentual absoluto
 
 # Modelo Simple Exponential Smoothing
 class ModeloSES(ModeloPrevisao):
@@ -479,7 +526,7 @@ try:
         )
 
         mostrar_previsao_futura = st.checkbox("Mostrar Previsão Futura")
-        escolha_periodo = st.selectbox('Selecione o período futuro para previsão (meses)', [1, 3, 6, 12, 24, 36], index=2)
+        escolha_periodo = st.selectbox('Selecione o período futuro para previsão (meses)', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 24, 36], index=2)
 
         if modelo_selecionado == 'Simple Exponential Smoothing':
             modelo = ModeloSES(df_treino, df_valid)
@@ -490,6 +537,26 @@ try:
 
         modelo.treinar()
         modelo.prever(mostrar_previsao_futura, escolha_periodo)
+        
+        # mostrar previsao sem abreviação de M ou B
+        previsoes_futuras = None
+
+        if mostrar_previsao_futura:
+            previsoes_futuras = modelo.modelo.forecast(escolha_periodo)
+            previsoes_futuras = pd.Series(previsoes_futuras, index=pd.date_range(start=df_valid.index[-1], periods=escolha_periodo, freq='M'))
+            previsoes_futuras = np.exp(previsoes_futuras)
+            st.write('Previsões Futuras:')
+            st.write(previsoes_futuras)
+
+
+        dados_2024_existentes = dados[dados['Ano'] == 2024]
+        dados_2024_existentes['VALOR_EMPENHADO']
+            
 
 except Exception as e:
     st.error(f"Ocorreu um erro: {e}")
+
+
+st.title('Nova Seção')
+
+
