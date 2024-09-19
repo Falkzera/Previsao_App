@@ -26,6 +26,8 @@ from modulos.testes_estacionarios import *
 # Configurações Página
 st.set_page_config(layout="wide", page_icon=":bar_chart:", page_title="Análise do Gasto Empenhado")
 # Configurações Sidebar
+
+
 st.sidebar.title('Configurações')
 st.sidebar.write('Selecione as opções gráficas.')
 # Botão de atualizar

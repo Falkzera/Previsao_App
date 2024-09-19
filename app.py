@@ -22,6 +22,7 @@ import streamlit as st
 import plotly.express as px
 from modulos.estacionaridade import *
 from modulos.testes_estacionarios import *
+from modulos.Credito import *
 ##########################################################################
 # Configurações Página
 st.set_page_config(layout="wide", page_icon=":bar_chart:", page_title="Análise do Gasto Empenhado")
@@ -526,8 +527,5 @@ try:
 
 except Exception as e:
     st.error(f"Ocorreu um erro: {e}")
-
-
-st.title('Nova Seção')
-
-
+    
+display_credits()
