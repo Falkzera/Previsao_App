@@ -1,0 +1,2 @@
+data/desepesa_2018_2024.csv filter=lfs diff=lfs merge=lfs -text
+data/despesa_2014_2017.xlsx filter=lfs diff=lfs merge=lfs -text
