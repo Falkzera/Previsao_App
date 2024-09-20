@@ -23,6 +23,8 @@ import plotly.express as px
 from modulos.estacionaridade import *
 from modulos.testes_estacionarios import *
 from modulos.Credito import *
+from modulos.filtros import *
+from modulos.carregamento import *
 ##########################################################################
 # Configurações Página
 st.set_page_config(layout="wide", page_icon=":bar_chart:", page_title="Análise do Gasto Empenhado")
@@ -32,7 +34,7 @@ st.sidebar.write('Selecione as opções gráficas.')
 # Botão de atualizar
 
 ###############################################################################
-# Carregando e filtrando a Base
+
 @st.cache_data
 def load_data():
     df = pd.read_csv('data/desepesa_2018_2024.csv', encoding='latin1', sep=';')
@@ -44,33 +46,23 @@ def load_data():
 
 # Carregar os dados
 dados = load_data()
-########################################################################################
-# Pré-processamento
+
 sigla = pd.read_csv('data/sigla.csv')
 sigla['UO'] = sigla['UO'].astype('object')
 sigla_nat3 = pd.read_csv('data/sigla_nat3.csv')
-
-# em sigla contem a coluna UO que é a Unidade Orçamentária e contem a coluna PODER que é a sigla de UO. Quero que essa coluna de PODER va para o df dados e crie uma coluna UO_sigla
 dados = dados.merge(sigla[['UO', 'SIGLA']], on='UO', how='left')
 dados = dados.merge(sigla_nat3[['NATUREZA3', 'NATUREZA3_DESC']], on='NATUREZA3', how='left')
-
-# Renomear a coluna 'PODER' para 'UO_sigla'
 dados.rename(columns={'SIGLA': 'UO_sigla'}, inplace=True)
-
 dados['ANO_MES'] = dados['ANO'].astype(str) + '-' + dados['MES'].astype(str)
 dados['ANO_MES'] = pd.to_datetime(dados['ANO_MES'], format='%Y-%m')
 dados = dados.sort_values(by=['ANO', 'MES']).reset_index(drop=True)
 convertendo_obj = ['ANO', 'MES', 'PODER', 'UO', 'UG', 'FONTE_MAE', 'NATUREZA3']
 for column in convertendo_obj:
     dados[column] = dados[column].astype('object')
-
-
-# dados = dados.dropna()
 dados = dados[dados['VALOR_EMPENHADO'] > 1]
 dados.set_index('ANO_MES', inplace=True)  # Setando o index e removendo a coluna
+dados = dados.loc[dados.index != '2024-09']
 ############################################################################################
-# Filtros de seleção
-# Descrição das legendas
 if st.sidebar.checkbox('Ativar Siglas', value=True):
     dados['UO'] = dados['UO_sigla']
     dados['NATUREZA3'] = dados['NATUREZA3_DESC']
@@ -78,18 +70,9 @@ else:
     dados['UO'] = dados['UO']
     dados['NATUREZA3'] = dados['NATUREZA3']
 
-uo_options = ['TODAS'] + list(dados['UO'].unique()) # Opções de seleção para Unidade Orçamentária
-default_poder = ['EXE']
-default_uo = ['TODAS']
-escolha_poder = st.sidebar.multiselect('Escolha o Poder', dados['PODER'].unique(), default_poder) # Seleção de Poder
-escolha_uo = st.sidebar.multiselect('Escolha a UO', uo_options, default_uo) # Seleção de Unidade Orçamentária
-escolha_nat3 = st.sidebar.multiselect('Escolha a Natureza - 3', dados['NATUREZA3'].unique()) # Seleção de Natureza
-if 'TODAS' not in escolha_uo:
-    dados = dados[dados['UO'].isin(escolha_uo)]
-if escolha_nat3:
-    dados = dados[dados['NATUREZA3'].isin(escolha_nat3)]
-if escolha_poder:
-    dados = dados[dados['PODER'].isin(escolha_poder)]
+
+dados = filtros_usuario(dados)
+
 #####################################################################################################
 # Metrícas
 total_gasto = dados['VALOR_EMPENHADO'].sum() # Total gasto no período
@@ -141,7 +124,6 @@ ranking_gastos_uo_natureza.index = ranking_gastos_uo_natureza.index.astype(str).
 # Agrupando os dados
 dados = dados.drop(columns=['ANO', 'MES'])
 dados = dados.groupby('ANO_MES')['VALOR_EMPENHADO'].sum().reset_index()
-dados = dados[:-1]  # Setembro não acabou, então não temos o valor oficial de setembro de 2024
 dados.set_index('ANO_MES', inplace=True)  # Setando o index novamente após o agrupamento
 ############################################################################################
 # Layout Página

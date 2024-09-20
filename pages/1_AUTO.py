@@ -23,6 +23,7 @@ import plotly.express as px
 from modulos.estacionaridade import *
 from modulos.testes_estacionarios import *
 from modulos.Credito import *
+from modulos.filtros import *
 ##########################################################################
 # Configurações Página
 st.set_page_config(layout="wide", page_icon="🤖", page_title="Previsão do Gasto Empenhado")
@@ -44,8 +45,6 @@ def load_data():
 # Carregar os dados
 dados = load_data()
 
-########################################################################################
-# Pré-processamento
 sigla = pd.read_csv('data/sigla.csv')
 sigla['UO'] = sigla['UO'].astype('object')
 sigla_nat3 = pd.read_csv('data/sigla_nat3.csv')
@@ -67,9 +66,9 @@ for column in convertendo_obj:
 # dados = dados.dropna()
 dados = dados[dados['VALOR_EMPENHADO'] > 1]
 dados.set_index('ANO_MES', inplace=True)  # Setando o index e removendo a coluna ANO_MES
-# Filtrar por poder
-dados = dados[dados['PODER'] == 'EXE']
-dados = dados[dados['NATUREZA3'] == 331000000]
+
+dados = filtros_usuario(dados)
+
 
 # Remover de dadaos 2024.09
 dados = dados.loc[dados.index != '2024-09']
@@ -177,7 +176,7 @@ st.write('Resultados Combinados')
 resultados_combinados = np.expm1(resultados_combinados)
 st.write(resultados_combinados)
 
-# if st.button('Salvar previsões'):
-#     resultados_combinados.to_excel('data/previsoes_2.xlsx', index=True)
+if st.button('Salvar previsões'):
+    resultados_combinados.to_excel('data/Previsoes_Fonte_500_e_100_331.xlsx', index=True)
 
 display_credits()

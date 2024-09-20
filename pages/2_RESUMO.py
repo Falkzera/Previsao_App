@@ -31,7 +31,6 @@ st.button('Atualizar')
 st.subheader('RESUMO ANUAL DA DOTAÇÃO ORÇAMENTÁRIA - 2024')
 st.write('##')
 dados = pd.read_csv('data/SALDO_PESSOAL.csv')
-dados
 
 #  Adicionando controle de radio para seleção de formato
 formato_valores = st.sidebar.radio(
