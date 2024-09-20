@@ -36,9 +36,13 @@ def aplicar_transformacao(dados, transformacao):
     else:
         raise ValueError("Transformação desconhecida")
 
-def aplicar_transformacao_e_testar(dados, transformacao, descricao):
+def aplicar_transformacao_e_testar(dados, transformacao, descricao):# descricao é uma string que descreve a transformação
     dados_transformados = aplicar_transformacao(dados, transformacao)
     teste_estacionaridade = dsa_testa_estacionaridade(dados_transformados)
     if teste_estacionaridade:
         st.success(f'A série é estacionária após a transformação: {descricao}.')
     return teste_estacionaridade, dados_transformados
+
+# exemplo de uso
+
+# lista de testes

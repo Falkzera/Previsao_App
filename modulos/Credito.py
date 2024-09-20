@@ -3,8 +3,9 @@ import streamlit as st
 
 def display_credits():
     with st.sidebar:
-    
-        st.image('image/SOP.png', width=300, use_column_width=False)
+        st.write('---')
+        st.caption('Develper by:')
+        st.image('image/SOP.png', width=300, use_column_width=True)
         
 
 
