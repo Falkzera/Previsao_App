@@ -30,7 +30,6 @@ st.set_page_config(layout="wide", page_icon="🤖", page_title="Previsão do Gas
 # Configurações Sidebar
 st.sidebar.title('Configurações')
 st.sidebar.write('Selecione as opções gráficas.')
-
 ###############################################################################
 # Carregando e filtrando a Base
 @st.cache_data

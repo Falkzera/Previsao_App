@@ -278,8 +278,7 @@ teste_estacionaridade = dsa_testa_estacionaridade(dados['VALOR_EMPENHADO'])
 if teste_estacionaridade:
     st.success('A série temporal é estacionária.')
 else:
-    st.error('A série temporal não é estacionária.')
-    st.warning('Aplicando Transformação...')
+    st.error('A série temporal não é estacionária por padrão.')
 
 # Transformando a série temporal em logaritmo - Estacionaridade Manual
 dados['VALOR_EMPENHADO_log'] = np.log(dados['VALOR_EMPENHADO'])
@@ -497,10 +496,10 @@ df_treino = dados.iloc[:indice_corte]
 df_valid = dados.iloc[indice_corte:]
 
 try:
-    with st.expander("Modelos de Previsão"):
+    with st.expander("Modelos de Previsão", expanded=True):
         modelo_selecionado = st.radio(
             "Selecione o modelo de previsão",
-            ('Simple Exponential Smoothing', 'Double Exponential Smoothing', 'Triple Exponential Smoothing')
+            ('Simple Exponential Smoothing', 'Double Exponential Smoothing', 'Triple Exponential Smoothing'),
         )
 
         mostrar_previsao_futura = st.checkbox("Mostrar Previsão Futura")
