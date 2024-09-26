@@ -100,13 +100,6 @@ st.subheader(f'Quantidade de previsões: {len(lista_dataframes)}.')
 
 
 ###############################################################################################
-import pandas as pd
-import numpy as np
-from statsmodels.tsa.holtwinters import ExponentialSmoothing
-from sklearn.metrics import mean_absolute_error, mean_absolute_percentage_error, mean_squared_error
-from math import sqrt
-import plotly.graph_objects as go
-import streamlit as st
 
 def preprocess_data(df):
     df.set_index('ANO_MES', inplace=True)
@@ -137,8 +130,6 @@ def plot_forecast(df, serie_previsoes, uo_sigla):
     ajuste_zoom = st.checkbox(f'Ajustar zoom do gráfico {uo_sigla}', key=f'zoom_{uo_sigla}')
     if ajuste_zoom:
         df = df.loc['2024-01':]
-    
-
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df.index, y=df['VALOR_EMPENHADO_log'], mode='lines', name='Valor Empenhado'))

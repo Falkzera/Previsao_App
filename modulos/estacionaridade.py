@@ -26,7 +26,7 @@ def dsa_testa_estacionaridade(serie, window=12):
     for key, value in dfteste[4].items():
         dfsaida['Valor Crítico (%s)' % key] = value
         
-    print(dfsaida)
+    # print(dfsaida)
     # st.write(dfsaida)
     
     # Conclusão baseada no valor-p

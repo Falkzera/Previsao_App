@@ -10,7 +10,7 @@ def transformar_sqrt(dados):
     return np.sqrt(dados)
 
 def transformar_boxcox(dados):
-    return boxcox(dados)[0]
+    return boxcox(dados)
 
 def transformar_media_movel_simples(dados):
     dados_transformados = dados.rolling(window=12).mean()
@@ -36,13 +36,31 @@ def aplicar_transformacao(dados, transformacao):
     else:
         raise ValueError("Transformação desconhecida")
 
-def aplicar_transformacao_e_testar(dados, transformacao, descricao):# descricao é uma string que descreve a transformação
+def aplicar_transformacao_e_testar(dados, transformacao, descricao):
     dados_transformados = aplicar_transformacao(dados, transformacao)
     teste_estacionaridade = dsa_testa_estacionaridade(dados_transformados)
     if teste_estacionaridade:
         st.success(f'A série é estacionária após a transformação: {descricao}.')
     return teste_estacionaridade, dados_transformados
 
-# exemplo de uso
+def testar_todas_transformacoes(dados):
+    transformacoes = {
+        'log': 'Transformação Logarítmica',
+        'sqrt': 'Transformação Raiz Quadrada',
+        'boxcox': 'Transformação Box-Cox',
+        'media_movel_simples': 'Transformação Média Móvel Simples',
+        'media_movel_exponencial': 'Transformação Média Móvel Exponencial'
+    }
+    
+    resultados = {}
+    
+    for transformacao, descricao in transformacoes.items():
+        teste_estacionaridade, dados_transformados = aplicar_transformacao_e_testar(dados, transformacao, descricao)
+        resultados[descricao] = {
+            'estacionaridade': teste_estacionaridade,
+            'dados_transformados': dados_transformados
+        }
+    
+    return resultados
 
-# lista de testes
+# Execução

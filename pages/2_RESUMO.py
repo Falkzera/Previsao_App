@@ -80,7 +80,7 @@ with st.container():
     col3.metric(label="Total Empenhado + Previsão", value=formatar_valor(somatorio_empenhado_previsto, formato_valores))
     col4.metric(label="Saldo", value=formatar_valor(saldo, formato_valores), delta=f'-{formatar_valor(saldo, formato_valores)}', delta_color="normal")
 
-
+# ----------------------------------------------------------------- #
 
 
 
@@ -90,12 +90,10 @@ with st.container():
 dados['UO'] = dados['UO'].astype(str)
 dados['DESCRICAO_UO'] = dados['DESCRICAO_UO'].astype(str)
 
-st.write('##')
 st.write('---')
 st.write('##')
 
 st.title('Por Unidade Orçamentária')
-st.write('##')
 
 # Adicionando campo de busca
 busca_uo = st.text_input("Digite a Unidade Orçamentária que deseja encontrar:")
@@ -108,60 +106,57 @@ uos_saldo_positivo = []
 # Iterar sobre cada UO e calcular métricas
 
 # Só mostrará no streamlit se o usuario clicar no checkbox ou digitar algo no campo de busca
+with st.container():
+    with st.expander("Visualizar Unidades Orçamentárias"):
+        for (uo, descricao_uo), grupo in grupos_uo:
+            # Verificar se a busca corresponde à UO ou à descrição da UO
+            if busca_uo.lower() in uo.lower() or busca_uo.lower() in descricao_uo.lower():
+                # Criação e Aplicação das métricas
+                dotacao_inicial = grupo['VALOR_DOTACAO_INICIAL'].sum() # Valor da dotação inicial
+                dotacao_atualizada = grupo['VALOR_ATUALIZADO'].sum() # Valor da dotação inicial
+                diferencial = dotacao_inicial - dotacao_atualizada # Diferencial entre a dotação inicial e a dotação atualizada
+                if diferencial > 0:
+                    diferencial = 0
+                elif diferencial < 0:
+                    diferencial = abs(diferencial)
+                empenhado_08 = grupo['VALOR_EMPENHADO'].sum() # Valor empenhado até o Mês 2024.8
+                valor_previsto = grupo['PREVISAO'].sum() # Valor previsto até o final do ano
+                somatorio_empenhado_previsto = empenhado_08 + valor_previsto # Somatório do valor empenhado até o mês 08 e o valor previsto até o final do ano
+                saldo = dotacao_atualizada - somatorio_empenhado_previsto # Saldo é valor atualizado menos o total
+                if saldo < 0:
+                    uos_saldo_negativo.append((descricao_uo, saldo))
+                elif saldo > 0:
+                    uos_saldo_positivo.append((descricao_uo, saldo))
 
 
+                # COLOCAR TUDO ISSO DENTRO DE UM EXPANDER
 
-for (uo, descricao_uo), grupo in grupos_uo:
-    # Verificar se a busca corresponde à UO ou à descrição da UO
-    if busca_uo.lower() in uo.lower() or busca_uo.lower() in descricao_uo.lower():
-        # Criação e Aplicação das métricas
-        dotacao_inicial = grupo['VALOR_DOTACAO_INICIAL'].sum() # Valor da dotação inicial
-        dotacao_atualizada = grupo['VALOR_ATUALIZADO'].sum() # Valor da dotação inicial
-        
-        diferencial = dotacao_inicial - dotacao_atualizada # Diferencial entre a dotação inicial e a dotação atualizada
-        if diferencial > 0:
-            diferencial = 0
-        elif diferencial < 0:
-            diferencial = abs(diferencial)
-        empenhado_08 = grupo['VALOR_EMPENHADO'].sum() # Valor empenhado até o Mês 2024.8
-        valor_previsto = grupo['PREVISAO'].sum() # Valor previsto até o final do ano
-        somatorio_empenhado_previsto = empenhado_08 + valor_previsto # Somatório do valor empenhado até o mês 08 e o valor previsto até o final do ano
-        saldo = dotacao_atualizada - somatorio_empenhado_previsto # Saldo é valor atualizado menos o total
+            
+                    # Exibindo métricas para cada UO
+                    st.write(f'### **UNIDADE ORÇAMENTÁRIA**: *{descricao_uo.lower().title()}*')
+                    # Determine the delta color based on the value of diferencial
+                    delta_color = "off" if diferencial == 0 else "normal"
 
-        if saldo < 0:
-            uos_saldo_negativo.append((descricao_uo, saldo))
-        elif saldo > 0:
-            uos_saldo_positivo.append((descricao_uo, saldo))
+                    with st.container():
+                        st.subheader('Dotação Orçamentária:')
+                        col1, col2, col3, col4 = st.columns(4)
+                        col1.metric(label="Dotação Inicial", value=formatar_valor(dotacao_inicial, formato_valores))
+                        col2.metric(label="Dotação Atualizada", value=formatar_valor(dotacao_atualizada, formato_valores))
+                        col3.metric(label="Suplementado", value=formatar_valor(diferencial, formato_valores), delta=f'{formatar_valor(diferencial, formato_valores)}', delta_color=delta_color)
 
+                    with st.container():
+                        st.subheader('Previsão Orçamentária:')
+                        col1, col2, col3, col4 = st.columns(4)
+                        col1.metric(label="Valor Empenhado até mês 08", value=formatar_valor(empenhado_08, formato_valores))
+                        col2.metric(label="Previsão até o final do exercício", value=formatar_valor(valor_previsto, formato_valores))
+                        col3.metric(label="Total Empenhado + Previsão", value=formatar_valor(somatorio_empenhado_previsto, formato_valores))
+                        col4.metric(label="Saldo", value=formatar_valor(saldo, formato_valores), delta=f'{saldo:.2f}', delta_color="normal")
+                    st.write('---')
+                # encerrar o primeiro for para começar o outro
 
-        # COLOCAR TUDO ISSO DENTRO DE UM EXPANDER
-
-        st.expander(f'Unidade Orçamentária: {descricao_uo}')
-        # Exibindo métricas para cada UO
-        st.write(f'### **UNIDADE ORÇAMENTÁRIA**: *{descricao_uo.lower().title()}*')
-        # Determine the delta color based on the value of diferencial
-        delta_color = "off" if diferencial == 0 else "normal"
-
-        with st.container():
-            st.subheader('Dotação Orçamentária:')
-            col1, col2, col3, col4 = st.columns(4)
-            col1.metric(label="Dotação Inicial", value=formatar_valor(dotacao_inicial, formato_valores))
-            col2.metric(label="Dotação Atualizada", value=formatar_valor(dotacao_atualizada, formato_valores))
-            col3.metric(label="Suplementado", value=formatar_valor(diferencial, formato_valores), delta=f'{formatar_valor(diferencial, formato_valores)}', delta_color=delta_color)
-
-        with st.container():
-            st.subheader('Previsão Orçamentária:')
-            col1, col2, col3, col4 = st.columns(4)
-            col1.metric(label="Valor Empenhado até mês 08", value=formatar_valor(empenhado_08, formato_valores))
-            col2.metric(label="Previsão até o final do exercício", value=formatar_valor(valor_previsto, formato_valores))
-            col3.metric(label="Total Empenhado + Previsão", value=formatar_valor(somatorio_empenhado_previsto, formato_valores))
-            col4.metric(label="Saldo", value=formatar_valor(saldo, formato_valores), delta=f'{saldo:.2f}', delta_color="normal")
-        st.write('---')
-        # encerrar o primeiro for para começar o outro
-        
-
-# Só será executado quando o primeiro for acabar
-# Resumo do Saldo das Unidades Orçamentárias
+# ----------------------------------------------------------------- #
+# # Resumo do Saldo das Unidades Orçamentárias
+# MOSTRAR PRIMEIRO 
 with st.container():
     st.subheader('Resumo do Saldo das Unidades Orçamentárias:')
     col1, col2, col3 = st.columns(3)
@@ -179,10 +174,7 @@ with st.expander("Visualizar Unidades Orçament-aárias com Saldo Positivo"):
     for descricao_uo, saldo in uos_saldo_positivo:
         st.write(f'**{descricao_uo}**: {formatar_valor(saldo, formato_valores)}')
 
-
-
-
-
+# ----------------------------------------------------------------- #
 display_credits()
 
 
